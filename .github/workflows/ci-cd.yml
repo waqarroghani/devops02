@@ -21,22 +21,32 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-
       - name: Archive build artifacts
         run: zip -r nodejs-app.zip .
         env:
           NODE_ENV: production
+
+      - name: Upload to S3 for Elastic Beanstalk
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws s3 cp nodejs-app.zip s3://roghani012/releases/v1/deploy-package.zip
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to AWS Elastic Beanstalk
+      - name: Create Application Version on Elastic Beanstalk
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          zip -r deploy-package.zip . -x node_modules/\*
-          aws elasticbeanstalk create-application-version --application-name "NodejsApp" --version-label "v1" --source-bundle S3Bucket="YOUR_BUCKET_NAME",S3Key="deploy-package.zip"
+          aws elasticbeanstalk create-application-version \
+            --application-name "NodejsApp" \
+            --version-label "v1" \
+            --source-bundle S3Bucket="roghani012",S3Key="releases/v1/deploy-package.zip"
+
